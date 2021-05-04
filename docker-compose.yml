@@ -1,0 +1,13 @@
+version: "3.1"
+
+services:
+  db:
+    image: postgres:12.6-alpine
+    environment:
+      PG_DATA: /var/lib/postgresql/data
+      POSTGRES_DB: remix-app-template
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: user
+    volumes:
+      - ./.cache/db/data:/var/lib/postgresql/data
+    restart: unless-stopped
