@@ -5,12 +5,13 @@
   "license": "MIT",
   "scripts": {
     "build": "remix build",
-    "db:generate": "npx prisma generate",
-    "db:migration:create": "npx prisma migrate dev --name ",
-    "db:migrate": "npx prisma migrate deploy",
-    "db:reset": "npx prisma migrate reset",
-    "db:seed": "npx prisma db seed --preview-feature",
-    "dev": "remix run",
+    "db:check": "docker-compose up db-wait &>/dev/null",
+    "db:generate": "npm run -s db:check && npx prisma generate",
+    "db:migration:create": "npm run -s db:check && npx prisma migrate dev --name ",
+    "db:migrate": "npm run -s db:check && npx prisma migrate deploy",
+    "db:reset": "npm run -s db:check && npx prisma migrate reset",
+    "db:seed": "npm run -s db:check && npx prisma db seed --preview-feature",
+    "dev": "npm run -s db:migrate && remix run",
     "start": "remix-serve build"
   },
   "dependencies": {
