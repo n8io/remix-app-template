@@ -5,13 +5,16 @@
   "license": "MIT",
   "scripts": {
     "build": "remix build",
+    "clean": "npm run -s db:clean && rm -rf ./build ./public/build",
+    "db:clean": "docker-compose down --remove-orphans && rm -rf ./.cache/db",
     "db:check": "docker-compose up db-wait &>/dev/null",
     "db:generate": "npm run -s db:check && npx prisma generate",
     "db:migration:create": "npm run -s db:check && npx prisma migrate dev --name ",
     "db:migrate": "npm run -s db:check && npx prisma migrate deploy",
     "db:reset": "npm run -s db:check && npx prisma migrate reset",
     "db:seed": "npm run -s db:check && npx prisma db seed --preview-feature",
-    "dev": "npm run -s db:migrate && remix run",
+    "dev": "remix run",
+    "init": "npm run db:migrate && npm run db:seed",
     "start": "remix-serve build"
   },
   "dependencies": {
@@ -19,6 +22,7 @@
     "@remix-run/node": "0.17.0",
     "@remix-run/react": "0.17.0",
     "@remix-run/serve": "0.17.0",
+    "prisma": "^2.21.2",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-router-dom": "^6.0.0-beta.0",
@@ -29,7 +33,6 @@
     "@remix-run/dev": "0.17.0",
     "@types/react": "^17.0.1",
     "@types/react-dom": "^17.0.0",
-    "prisma": "^2.21.2",
     "typescript": "^4.1.2"
   },
   "engines": {
