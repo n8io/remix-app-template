@@ -6,6 +6,7 @@ const main = async () => {
   const adminUser = {
     email: "admin@example.com",
     role: Role.ADMIN,
+    passwordHash: "admin",
     username: "admin",
   };
 

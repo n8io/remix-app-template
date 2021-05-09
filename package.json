@@ -7,7 +7,7 @@
     "build": "remix build",
     "clean": "npm run -s db:clean && rm -rf ./build ./public/build",
     "db:clean": "docker-compose down --remove-orphans && rm -rf ./.cache/db",
-    "db:check": "docker-compose up db-wait &>/dev/null",
+    "db:check": "printf \"Ensuring db is ready...\" && docker-compose up db-wait &>/dev/null && echo 🏁",
     "db:generate": "npm run -s db:check && npx prisma generate",
     "db:migration:create": "npm run -s db:check && npx prisma migrate dev --name ",
     "db:migrate": "npm run -s db:check && npx prisma migrate deploy",
