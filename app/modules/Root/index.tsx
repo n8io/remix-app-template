@@ -1,13 +1,17 @@
 import type { LinksFunction, LoaderFunction, MetaFunction } from "remix";
 import { useRouteData } from "remix";
+import { App } from "../../constants/enums";
+import { ensureAuthenticated } from "../../utils/session";
 import stylesUrl from "./index.css";
 
 const links: LinksFunction = () => [{ rel: "stylesheet", href: stylesUrl }];
-const loader: LoaderFunction = async () => ({ message: "this is awesome 😎" });
+
+const loader: LoaderFunction = async ({ request }) =>
+  ensureAuthenticated(request, (userSession) => userSession);
 
 const meta: MetaFunction = () => ({
-  title: "Remix Starter",
-  description: "Welcome to remix!",
+  title: App.NAME,
+  description: App.DESCRIPTION,
 });
 
 const Root = () => {
@@ -15,12 +19,12 @@ const Root = () => {
 
   return (
     <div style={{ textAlign: "center", padding: 20 }}>
-      <h2>Welcome to Remix!</h2>
+      <h1>Welcome to Remix!</h1>
       <p>
         <a href="https://remix.run/dashboard/docs">Check out the docs</a> to get
         started.
       </p>
-      <p>Message from the loader: {data.message}</p>
+      <p>Message from the loader: {data.user}</p>
     </div>
   );
 };
