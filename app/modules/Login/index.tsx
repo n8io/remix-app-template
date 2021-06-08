@@ -1,5 +1,6 @@
 import {
   ActionFunction,
+  Form,
   json,
   LinksFunction,
   LoaderFunction,
@@ -77,7 +78,7 @@ const Login = () => {
   return (
     <div style={{ textAlign: "center", padding: 20 }}>
       <h1>Login</h1>
-      <form method="post">
+      <Form method="post">
         <p>
           <label>
             Email Address:
@@ -103,7 +104,7 @@ const Login = () => {
           </label>
         </p>
         <button type="submit">Log In</button>
-      </form>
+      </Form>
     </div>
   );
 };
