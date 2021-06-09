@@ -20,7 +20,8 @@ const main = async () => {
 
   const profile = await db.profile.upsert({
     create: {
-      name: "Admin",
+      familyName: "User",
+      givenName: "Admin",
       userId: user.id,
     },
     where: { userId: user.id },
