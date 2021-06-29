@@ -12,9 +12,9 @@ import { App } from "../../constants/enums";
 import { Route } from "../../constants/routes";
 import {
   makeRequestInit,
-  readFlashData,
-  writeFlashData,
-  writeUser,
+  readFlashData as readFlashDataFromCookie,
+  writeFlashData as writeFlashDataToCookie,
+  writeUser as writeUserToCookie,
 } from "../../utils/cookie";
 import stylesUrl from "./index.css";
 
@@ -48,13 +48,15 @@ const action: ActionFunction = async ({ request }) => {
 
   if (Object.keys(errors).length) {
     const formSession: FormSession = { data, errors };
-
-    const cookie = await writeFlashData<FormSession>(request, formSession);
+    const cookie = await writeFlashDataToCookie<FormSession>(
+      request,
+      formSession
+    );
 
     return redirect(Route.LOGIN.pathname, makeRequestInit(cookie));
   }
 
-  const cookie = await writeUser<string>(request, email!);
+  const cookie = await writeUserToCookie<string>(request, email!);
 
   return redirect(Route.ROOT.pathname, makeRequestInit(cookie));
 };
@@ -62,7 +64,9 @@ const action: ActionFunction = async ({ request }) => {
 const links: LinksFunction = () => [{ rel: "stylesheet", href: stylesUrl }];
 
 const loader: LoaderFunction = async ({ request }) => {
-  const { cookie, data = {} } = await readFlashData<FormSession>(request);
+  const { cookie, data = {} } = await readFlashDataFromCookie<FormSession>(
+    request
+  );
 
   return json(data, makeRequestInit(cookie));
 };

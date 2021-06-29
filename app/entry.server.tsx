@@ -1,6 +1,11 @@
 import ReactDOMServer from "react-dom/server";
 import type { EntryContext } from "remix";
 import { RemixServer } from "remix";
+import { Header } from "./constants/enums";
+
+enum ContentType {
+  HTML = "text/html",
+}
 
 const handleRequest = (
   request: Request,
@@ -12,13 +17,19 @@ const handleRequest = (
     <RemixServer context={remixContext} url={request.url} />
   );
 
-  return new Response("<!DOCTYPE html>" + markup, {
+  const body: BodyInit = `<!DOCTYPE html>${markup}`;
+
+  const headers: HeadersInit = {
+    ...Object.fromEntries(responseHeaders),
+    [Header.CONTENT_TYPE]: ContentType.HTML,
+  };
+
+  const init: ResponseInit = {
     status: responseStatusCode,
-    headers: {
-      ...Object.fromEntries(responseHeaders),
-      "Content-Type": "text/html",
-    },
-  });
+    headers,
+  };
+
+  return new Response(body, init);
 };
 
 export default handleRequest;
