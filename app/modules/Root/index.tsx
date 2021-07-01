@@ -4,7 +4,10 @@ import { App } from "../../constants/enums";
 import { ensureAuthenticated } from "../../utils/session";
 import stylesUrl from "./index.css";
 
-const links: LinksFunction = () => [{ rel: "stylesheet", href: stylesUrl }];
+const links: LinksFunction = () => [
+  { rel: "author", href: "/humans.txt" },
+  { rel: "stylesheet", href: stylesUrl },
+];
 
 const loader: LoaderFunction = async ({ request }) =>
   ensureAuthenticated(request, (userSession) => userSession);
