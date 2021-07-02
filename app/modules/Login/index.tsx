@@ -2,12 +2,14 @@ import {
   ActionFunction,
   Form,
   json,
+  Link,
   LinksFunction,
   LoaderFunction,
   MetaFunction,
   redirect,
   useRouteData,
 } from "remix";
+import { ErrorsSummary } from "../../components/ErrorsSummary";
 import { App } from "../../constants/enums";
 import { Route } from "../../constants/routes";
 import {
@@ -107,7 +109,11 @@ const Login = () => {
             />
           </label>
         </p>
+        <ErrorsSummary errors={errors} />
         <button type="submit">Log In</button>
+        <p>
+          <Link to={Route.SIGN_UP.pathname}>Sign Up</Link>
+        </p>
       </Form>
     </div>
   );
