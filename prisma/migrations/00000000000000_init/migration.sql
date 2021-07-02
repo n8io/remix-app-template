@@ -15,7 +15,6 @@ CREATE TABLE "Profile" (
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
-    "username" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "passwordHash" VARCHAR(512) NOT NULL,
     "passwordResetToken" TEXT,
@@ -29,9 +28,6 @@ CREATE TABLE "User" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Profile.userId_unique" ON "Profile"("userId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "User.username_unique" ON "User"("username");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User.email_unique" ON "User"("email");

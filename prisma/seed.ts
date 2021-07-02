@@ -7,12 +7,11 @@ const main = async () => {
     email: "admin@example.com",
     role: Role.ADMIN,
     passwordHash: "admin",
-    username: "admin",
   };
 
   const user = await db.user.upsert({
     create: adminUser,
-    where: { username: adminUser.username },
+    where: { email: adminUser.email },
     update: {},
   });
 
