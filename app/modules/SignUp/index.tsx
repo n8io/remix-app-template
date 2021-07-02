@@ -1,3 +1,5 @@
+import { FadeIn } from "../../components/FadeIn";
+import { InputError } from "../../components/InputError";
 import {
   ActionFunction,
   Form,
@@ -9,7 +11,6 @@ import {
   redirect,
   useRouteData,
 } from "remix";
-import { ErrorsSummary } from "../../components/ErrorsSummary";
 import { App } from "../../constants/enums";
 import { Route } from "../../constants/routes";
 import {
@@ -72,12 +73,16 @@ const action: ActionFunction = async ({ request }) => {
     return redirect(Route.SIGN_UP.pathname, makeRequestInit(cookie));
   }
 
+  // TODO: Create user and attach session id
   const cookie = await writeUserToCookie<string>(request, email!);
 
   return redirect(Route.ROOT.pathname, makeRequestInit(cookie));
 };
 
-const links: LinksFunction = () => [{ rel: "stylesheet", href: stylesUrl }];
+const links: LinksFunction = () => [
+  ...InputError.links,
+  { rel: "stylesheet", href: stylesUrl },
+];
 
 const loader: LoaderFunction = async ({ request }) => {
   const { cookie, data = {} } = await readFlashDataFromCookie<FormSession>(
@@ -109,6 +114,8 @@ const SignUp = () => {
               name="email"
               type="email"
             />
+            <br />
+            {errors?.email && <InputError>{errors?.email}</InputError>}
           </label>
         </p>
         <p>
@@ -121,6 +128,8 @@ const SignUp = () => {
               name="password"
               type="password"
             />
+            <br />
+            {errors?.password && <InputError>{errors?.password}</InputError>}
           </label>
         </p>
         <p>
@@ -133,9 +142,12 @@ const SignUp = () => {
               name="passwordConfirm"
               type="password"
             />
+            <br />
+            {errors?.passwordConfirm && (
+              <InputError>{errors?.passwordConfirm}</InputError>
+            )}
           </label>
         </p>
-        <ErrorsSummary errors={errors} />
         <button type="submit">Sign Up</button>
         <p>
           <Link to={Route.LOGIN.pathname}>Log In</Link>

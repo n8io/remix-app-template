@@ -1,3 +1,4 @@
+import { InputError } from "../../components/InputError";
 import {
   ActionFunction,
   Form,
@@ -9,7 +10,6 @@ import {
   redirect,
   useRouteData,
 } from "remix";
-import { ErrorsSummary } from "../../components/ErrorsSummary";
 import { App } from "../../constants/enums";
 import { Route } from "../../constants/routes";
 import {
@@ -63,7 +63,10 @@ const action: ActionFunction = async ({ request }) => {
   return redirect(Route.ROOT.pathname, makeRequestInit(cookie));
 };
 
-const links: LinksFunction = () => [{ rel: "stylesheet", href: stylesUrl }];
+const links: LinksFunction = () => [
+  ...InputError.links,
+  { rel: "stylesheet", href: stylesUrl },
+];
 
 const loader: LoaderFunction = async ({ request }) => {
   const { cookie, data = {} } = await readFlashDataFromCookie<FormSession>(
@@ -95,6 +98,8 @@ const Login = () => {
               name="email"
               type="email"
             />
+            <br />
+            {errors?.email && <InputError>{errors?.email}</InputError>}
           </label>
         </p>
         <p>
@@ -107,9 +112,10 @@ const Login = () => {
               name="password"
               type="password"
             />
+            <br />
+            {errors?.password && <InputError>{errors?.password}</InputError>}
           </label>
         </p>
-        <ErrorsSummary errors={errors} />
         <button type="submit">Log In</button>
         <p>
           <Link to={Route.SIGN_UP.pathname}>Sign Up</Link>
