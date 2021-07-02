@@ -19,9 +19,12 @@ interface UserSession {
 const { commitSession, getSession, destroySession } =
   createCookieSessionStorage({
     cookie: {
+      httpOnly: true,
       name: "__s",
+      path: "/",
       sameSite: "lax",
       secrets: [config.AUTH_SECRET],
+      secure: process.env.NODE_ENV !== "development",
     },
   });
 
