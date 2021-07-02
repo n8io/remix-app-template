@@ -12,6 +12,9 @@ const Route: Record<string, RouteType> = Object.freeze({
   ROOT: {
     pathname: "/",
   },
+  SIGN_UP: {
+    pathname: "/sign-up",
+  },
 });
 
 export { Route };
