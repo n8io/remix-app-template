@@ -1,4 +1,7 @@
 .input-error {
+  align-content: start;
   color: red;
+  display: grid;
   font-size: 0.75rem;
+  height: 1.25rem;
 }

@@ -13,17 +13,19 @@
     "db:migrate": "npm run -s db:check && npx prisma migrate deploy",
     "db:reset": "npm run -s db:check && npx prisma migrate reset",
     "db:seed": "npm run -s db:check && npx prisma db seed --preview-feature",
-    "dev": "remix run",
-    "init": "npm run db:migrate && npm run db:seed",
+    "dev": "env-cmd remix run",
+    "init": "env-cmd npm run db:migrate && npm run db:seed",
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@prisma/client": "^2.24.1",
+    "@prisma/client": "^2.26.0",
     "@remix-run/node": "^0.17.5",
     "@remix-run/react": "^0.17.5",
     "@remix-run/serve": "^0.17.5",
     "bcryptjs": "^2.4.3",
-    "prisma": "^2.24.1",
+    "debug": "^4.3.2",
+    "env-cmd": "^10.1.0",
+    "prisma": "^2.26.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-router-dom": "^6.0.0-beta.0",
@@ -33,6 +35,7 @@
   "devDependencies": {
     "@remix-run/dev": "^0.17.5",
     "@types/bcryptjs": "^2.4.2",
+    "@types/debug": "^4.1.6",
     "@types/react": "^17.0.11",
     "@types/react-dom": "^17.0.7",
     "typescript": "^4.3.2"

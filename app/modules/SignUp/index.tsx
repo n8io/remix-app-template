@@ -1,5 +1,4 @@
-import { FadeIn } from "../../components/FadeIn";
-import { InputError } from "../../components/InputError";
+import { Prisma, Profile, Session, User } from "@prisma/client";
 import {
   ActionFunction,
   Form,
@@ -9,27 +8,37 @@ import {
   LoaderFunction,
   MetaFunction,
   redirect,
-  useRouteData,
+  useRouteData
 } from "remix";
+import { InputError } from "../../components/InputError";
 import { App } from "../../constants/enums";
 import { Route } from "../../constants/routes";
 import {
   makeRequestInit,
   readFlashData as readFlashDataFromCookie,
-  writeFlashData as writeFlashDataToCookie,
-  writeUser as writeUserToCookie,
-} from "../../utils/cookie";
+  writeData as writeDataToCookie,
+  writeFlashData as writeFlashDataToCookie
+} from "../../utils/cookie.server";
+import { hash } from "../../utils/crypto.server";
+import { prisma } from "../../utils/db.server";
+import { logFactory } from "../../utils/logFactory";
 import stylesUrl from "./index.css";
 
 const PASSWORD_MIN_LENGTH = 8;
 
 interface FormData {
   email?: string;
+  firstName?: string;
+  lastName?: string;
   password?: string;
   passwordConfirm?: string;
 }
 
-type FormErrors = Partial<Record<keyof FormData, string>>;
+interface GenericErrors {
+  generic?: string;
+}
+
+type FormErrors = Partial<Record<keyof FormData, string>> & GenericErrors;
 
 interface FormSession {
   data?: FormData;
@@ -37,15 +46,25 @@ interface FormSession {
 }
 
 const action: ActionFunction = async ({ request }) => {
+  const log = logFactory('sign-up', 'action')
+
   const data: FormData = Object.fromEntries(
     new URLSearchParams(await request.text())
   );
 
-  const { email, password, passwordConfirm } = data;
+  const { email, firstName, lastName, password, passwordConfirm } = data;
   const errors: FormErrors = {};
 
   if (!email) {
     errors.email = "Email is required";
+  }
+
+  if (!firstName) {
+    errors.firstName = "First name is required";
+  }
+
+  if (!lastName) {
+    errors.lastName = "Last name is required";
   }
 
   if (!password) {
@@ -70,13 +89,74 @@ const action: ActionFunction = async ({ request }) => {
       formSession
     );
 
+    console.error(`👎 Invalid form. ${Object.keys(errors).length} error(s) found`, Object.values(errors))
+
     return redirect(Route.SIGN_UP.pathname, makeRequestInit(cookie));
   }
 
-  // TODO: Create user and attach session id
-  const cookie = await writeUserToCookie<string>(request, email!);
+  try {
+    const newUser: Partial<User> = {
+      email: data.email!.toLowerCase().trim(),
+      passwordHash: await hash(data.password!),
+    };
 
-  return redirect(Route.ROOT.pathname, makeRequestInit(cookie));
+
+    log(`🆕 Creating new user: ${email}`)
+
+    const { id: userId } = await prisma.user.create({
+      data: newUser as any,
+      select: { id: true },
+    });
+
+    log(`🆕 New user created: ${email}`)
+
+    const newProfile: Partial<Profile> = {
+      familyName: lastName,
+      givenName: firstName,
+      userId,
+    };
+
+    log(`🐣 Creating new profile: ${userId}`, {
+      firstName,
+      lastName,
+    })
+
+    await prisma.profile.create({ data: newProfile as any });
+
+    log(`🐣 New profile created: ${userId}`)
+
+    const newSession: Partial<Session> = { userId };
+
+    const { id: sessionId } = await prisma.session.create({
+      data: newSession as any,
+      select: { id: true },
+    });
+
+    const cookie = await writeDataToCookie<string>(request, sessionId);
+
+    return redirect(Route.ROOT.pathname, makeRequestInit(cookie));
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        // Failed unique constraint (email)
+        console.error(`🔴 Could not create new user. Email is already in use: ${email}`)
+      }
+    } else {
+      console.error(error)
+    }
+
+    const formSession: FormSession = {
+      data,
+      errors: { generic: `Sign up failed. Sorry` },
+    };
+
+    const cookie = await writeFlashDataToCookie<FormSession>(
+      request,
+      formSession
+    );
+
+    return redirect(Route.SIGN_UP.pathname, makeRequestInit(cookie));
+  }
 };
 
 const links: LinksFunction = () => [
@@ -100,54 +180,82 @@ const meta: MetaFunction = () => ({
 const SignUp = () => {
   const { data, errors } = useRouteData<FormSession>();
 
+  console.log({ errors });
+
   return (
     <div style={{ textAlign: "center", padding: 20 }}>
       <h1>Sign Up</h1>
       <Form method="post">
-        <p>
+        <div>
           <label>
             Email Address:
             <br />
             <input
               className={errors?.email && "error"}
-              defaultValue={data?.email}
+              defaultValue={data?.email ?? "a@a.a"}
               name="email"
               type="email"
             />
             <br />
-            {errors?.email && <InputError>{errors?.email}</InputError>}
+            <InputError error={errors?.email} />
           </label>
-        </p>
-        <p>
+        </div>
+        <div>
+          <label>
+            First Name:
+            <br />
+            <input
+              className={errors?.firstName && "error"}
+              defaultValue={data?.firstName ?? "Nate"}
+              name="firstName"
+              type="text"
+            />
+            <br />
+            <InputError error={errors?.firstName} />
+          </label>
+        </div>
+        <div>
+          <label>
+            Last Name:
+            <br />
+            <input
+              className={errors?.lastName && "error"}
+              defaultValue={data?.lastName ?? "Clark"}
+              name="lastName"
+              type="text"
+            />
+            <br />
+            <InputError error={errors?.lastName} />
+          </label>
+        </div>
+        <div>
           <label>
             Password:
             <br />
             <input
               className={errors?.password && "error"}
-              defaultValue={data?.password}
+              defaultValue={data?.password ?? "12345678"}
               name="password"
               type="password"
             />
             <br />
-            {errors?.password && <InputError>{errors?.password}</InputError>}
+            <InputError error={errors?.password} />
           </label>
-        </p>
-        <p>
+        </div>
+        <div>
           <label>
             Confirm Password:
             <br />
             <input
               className={errors?.passwordConfirm && "error"}
-              defaultValue={data?.passwordConfirm}
+              defaultValue={data?.passwordConfirm ?? "12345678"}
               name="passwordConfirm"
               type="password"
             />
-            <br />
-            {errors?.passwordConfirm && (
-              <InputError>{errors?.passwordConfirm}</InputError>
-            )}
+            <InputError error={errors?.passwordConfirm} />
           </label>
-        </p>
+        </div>
+        <InputError error={errors?.generic} />
         <button type="submit">Sign Up</button>
         <p>
           <Link to={Route.LOGIN.pathname}>Log In</Link>

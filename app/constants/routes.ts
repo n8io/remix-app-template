@@ -9,6 +9,9 @@ const Route: Record<string, RouteType> = Object.freeze({
   LOGIN: {
     pathname: "/login",
   },
+  LOGOUT: {
+    pathname: "/logout",
+  },
   ROOT: {
     pathname: "/",
   },

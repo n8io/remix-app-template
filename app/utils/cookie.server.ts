@@ -1,10 +1,10 @@
 import { Request } from "node-fetch";
 import { Header } from "../constants/enums";
-import { commitSession, readSession } from "./session";
+import { commitSession, readSession } from "./session.server";
 
 enum CookieKey {
-  FORM = "form",
-  USER = "user",
+  FLASH = "flash",
+  SESSION = "session",
 }
 
 interface FlashDataReadResponse<FlashData> {
@@ -22,7 +22,7 @@ const readFlashData = async <FlashData>(
   request: Request
 ): Promise<FlashDataReadResponse<FlashData>> => {
   const session = await readSession(request);
-  const raw = await session.get(CookieKey.FORM);
+  const raw = await session.get(CookieKey.FLASH);
   const data = raw ? JSON.parse(raw) : undefined;
   const cookie = await commitSession(session);
 
@@ -35,25 +35,25 @@ const writeFlashData = async <SessionFlashData>(
 ): Promise<string> => {
   const session = await readSession(request);
 
-  session.flash(CookieKey.FORM, JSON.stringify(data));
+  session.flash(CookieKey.FLASH, JSON.stringify(data));
 
   return commitSession(session);
 };
 
-const readUser = async <User>(request: Request): Promise<User> => {
+const readData = async <Data>(request: Request): Promise<Data> => {
   const session = await readSession(request);
-  const raw = await session.get(CookieKey.USER);
+  const raw = await session.get(CookieKey.SESSION);
   const data = raw ? JSON.parse(raw) : undefined;
 
-  return data as User;
+  return data as Data;
 };
 
-const writeUser = async <Data>(request: Request, data: Data) => {
+const writeData = async <Data>(request: Request, data: Data) => {
   const session = await readSession(request);
 
-  session.set(CookieKey.USER, JSON.stringify(data));
+  session.set(CookieKey.SESSION, JSON.stringify(data));
 
   return commitSession(session);
 };
 
-export { makeRequestInit, readFlashData, readUser, writeFlashData, writeUser };
+export { makeRequestInit, readData, readFlashData, writeData, writeFlashData };

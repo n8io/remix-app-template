@@ -1,7 +1,13 @@
-import type { LinksFunction, LoaderFunction, MetaFunction } from "remix";
-import { useRouteData } from "remix";
+import {
+  Form,
+  LinksFunction,
+  LoaderFunction,
+  MetaFunction,
+  useRouteData,
+} from "remix";
 import { App } from "../../constants/enums";
-import { ensureAuthenticated } from "../../utils/session";
+import { Route } from "../../constants/routes";
+import { ensureAuthenticated } from "../../utils/session.server";
 import stylesUrl from "./index.css";
 
 const links: LinksFunction = () => [
@@ -22,12 +28,16 @@ const Root = () => {
 
   return (
     <div style={{ textAlign: "center", padding: 20 }}>
-      <h1>Welcome to Remix!</h1>
+      <h1>{App.NAME}</h1>
       <p>
-        <a href="https://remix.run/dashboard/docs">Check out the docs</a> to get
-        started.
+        Message from the loader:{" "}
+        {`${data.profile?.givenName} ${data.profile?.familyName}`}
       </p>
-      <p>Message from the loader: {data.user}</p>
+      <p>
+        <Form action={Route.LOGOUT.pathname} method="post">
+          <button type="submit">log out</button>
+        </Form>
+      </p>
     </div>
   );
 };

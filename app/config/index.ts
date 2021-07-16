@@ -1,9 +1,19 @@
-type ProcessEnv = {
-  AUTH_SECRET: string;
+enum ProcessEnv {
+  AUTH_SECRET = "AUTH_SECRET",
+  DATABASE_URL = "DATABASE_URL",
+  PRIMARY_REGION = "PRIMARY_REGION",
+}
+
+const { env } = process;
+
+const read = (processEnvKey: ProcessEnv) => env[processEnvKey];
+
+const readRequired = (processEnvKey: ProcessEnv) => {
+  const value = read(processEnvKey);
+
+  if (typeof value !== "undefined") return value;
+
+  throw new Error(`Environment variable ${processEnvKey} is not provided`);
 };
 
-const config: ProcessEnv = {
-  AUTH_SECRET: process.env.AUTH_SECRET || process.env.npm_package_name!,
-};
-
-export { config };
+export { ProcessEnv, read, readRequired };
