@@ -1,10 +1,8 @@
 import {
   ActionFunction,
   Form,
-  json,
   Link,
   LinksFunction,
-  LoaderFunction,
   MetaFunction,
   redirect,
   useRouteData,
@@ -14,14 +12,12 @@ import { App } from "../../constants/app";
 import { Route } from "../../constants/route";
 import {
   makeRequestInit,
-  readFlashData as readFlashDataFromCookie,
   writeData as writeUserToCookie,
   writeFlashData as writeFlashDataToCookie,
 } from "../../utils/cookie.server";
 import { compare } from "../../utils/crypto.server";
 import { prisma } from "../../utils/db.server";
 import { logFactory } from "../../utils/logFactory";
-import { readUserProfile } from "../../utils/session.server";
 import stylesUrl from "./index.css";
 
 interface FormData {
@@ -152,18 +148,6 @@ const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
 ];
 
-const loader: LoaderFunction = async ({ request }) => {
-  const profile = await readUserProfile(request)
-
-  if (profile) return redirect(Route.ROOT.pathname)
-
-  const { cookie, data = {} } = await readFlashDataFromCookie<FormSession>(
-    request
-  );
-
-  return json(data, makeRequestInit(cookie));
-};
-
 const meta: MetaFunction = () => ({
   title: `${App.NAME}: Login`,
   description: "Login with your credentials",
@@ -188,7 +172,7 @@ const Login = () => {
             <br />
             <input
               className={errors?.email && "error"}
-              defaultValue={data?.email ?? 'a@a.a'}
+              defaultValue={data?.email ?? "a@a.a"}
               name="email"
               type="email"
             />
@@ -201,7 +185,7 @@ const Login = () => {
             <br />
             <input
               className={errors?.password && "error"}
-              defaultValue={data?.password ?? '123'}
+              defaultValue={data?.password ?? "123"}
               name="password"
               type="password"
             />
@@ -218,4 +202,4 @@ const Login = () => {
   );
 };
 
-export { Login, action, links, loader, meta };
+export { Login, action, links, meta };
