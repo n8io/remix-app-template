@@ -26,6 +26,10 @@ import stylesUrl from "./index.css";
 
 const PASSWORD_MIN_LENGTH = 8;
 
+interface ErrorMeta {
+  target: string[]
+}
+
 interface FormData {
   email?: string;
   firstName?: string;
@@ -136,10 +140,17 @@ const action: ActionFunction = async ({ request }) => {
 
     return redirect(Route.ROOT.pathname, makeRequestInit(cookie));
   } catch (error) {
+    let message = 'Sign up failed. Sorry'
+
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {
-        // Failed unique constraint (email)
-        console.error(`🔴 Could not create new user. Email is already in use: ${email}`)
+        const { meta } = error as { meta: ErrorMeta }
+
+        if (meta.target[0] === 'email') {
+          message = `Email is already in use: ${email}`;
+          // Failed unique constraint (email)
+          console.error(`🔴 Could not create new user. ${message}`)
+        }
       }
     } else {
       console.error(error)
@@ -147,7 +158,7 @@ const action: ActionFunction = async ({ request }) => {
 
     const formSession: FormSession = {
       data,
-      errors: { generic: `Sign up failed. Sorry` },
+      errors: { generic: message },
     };
 
     const cookie = await writeFlashDataToCookie<FormSession>(
