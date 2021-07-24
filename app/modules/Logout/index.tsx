@@ -1,13 +1,16 @@
-import { ActionFunction, redirect } from "remix";
+import { Debug } from 'debug';
+import { ActionFunction, LoaderFunction, Request, redirect } from 'remix';
 import { Route } from "../../constants/routes";
 import {
   makeRequestInit,
   readData,
   writeData,
-  writeFlashData,
+  writeFlashData
 } from "../../utils/cookie.server";
 import { prisma } from "../../utils/db.server";
 import { logFactory } from "../../utils/logFactory";
+import { ensureAuthenticated, readUserProfile } from '../../utils/session.server';
+import debug from 'debug';
 
 type SessionId = string;
 
@@ -15,14 +18,21 @@ interface FlashData {
   message: string;
 }
 
-const action: ActionFunction = async ({ request }) => {
-  const log = logFactory("logout", "action");
+const killSessionAndRedirectToLogin = async (request: Request, log: debug.Debugger) => {
   const sessionId = await readData<SessionId>(request);
 
   if (sessionId) {
-    log(`🔥 Deleting existing session: ${sessionId}...`)
-    await prisma.session.delete({ where: { id: sessionId } });
-    log(`🔥 Session deleted: ${sessionId}`)
+    try {
+      log(`🔥 Deleting existing session: ${sessionId}...`)
+      await prisma.session.delete({ where: { id: sessionId } });
+      log(`🔥 Session deleted: ${sessionId}`)
+    } catch (error) {
+      if (error.code === 'P2025') {
+        log(`🔥 Session "${sessionId}" no longer not exists. Nothing to do.`)
+      } else {
+        console.error(`🔴 Failed to delete user session: ${sessionId}`, error)
+      }
+    }
   }
 
   await writeData(request, "");
@@ -34,8 +44,20 @@ const action: ActionFunction = async ({ request }) => {
   log(`🔀 Redirecting to ${Route.LOGIN.pathname}...`)
 
   return redirect(Route.LOGIN.pathname, makeRequestInit(cookie));
+}
+
+const action: ActionFunction = async ({ request }) => {
+  const log = logFactory("logout", "action");
+
+  return killSessionAndRedirectToLogin(request, log)
 };
+
+const loader: LoaderFunction = async ({ request }) =>{
+  const log = logFactory("logout", "loader");
+
+  return killSessionAndRedirectToLogin(request, log)
+}
 
 const Logout = () => null;
 
-export { Logout, action };
+export { Logout, action, loader };

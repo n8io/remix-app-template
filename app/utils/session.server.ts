@@ -43,29 +43,24 @@ const { commitSession, getSession, destroySession } =
 
 const getUserSession = () => ({ now: new Date() });
 
-const ensureAuthenticated = async (
-  request: Request,
-  next: (session: UserSession) => ReturnType<LoaderFunction>
-) => {
-  const log = logFactory('session', 'ensureAuthenticated')
+const readUserProfile = async (request: Request): Promise<UserProfile | undefined> => {
+  const log = logFactory('session', 'readUserProfile')
   const sessionId = await readData<SessionId>(request);
 
   if (!sessionId) {
     log(`👎 No session id in cookie. Redirecting to ${Route.LOGIN.pathname}...`)
 
-    return redirect(Route.LOGIN.pathname);
+    return;
   }
 
   log(`🔎 Looking up session ${sessionId}...`)
 
   const session = await prisma.session.findUnique({ where: { id: sessionId } });
 
-  const cookie = await writeData<string>(request, "");
-
   if (!session) {
     log(`👎 No session found. Redirecting to ${Route.LOGIN.pathname}...`)
 
-    return redirect(Route.LOGIN.pathname, makeRequestInit(cookie));
+    return;
   }
 
 
@@ -80,7 +75,7 @@ const ensureAuthenticated = async (
   if (!foundUser) {
     log(`👎 No user found. Redirecting to ${Route.LOGIN.pathname}...`)
 
-    return redirect(Route.LOGIN.pathname, makeRequestInit(cookie));
+    return;
   }
 
   const { role } = foundUser;
@@ -94,14 +89,30 @@ const ensureAuthenticated = async (
   if (!foundProfile) {
     log(`👎 No user profile found. Redirecting to ${Route.LOGIN.pathname}...`)
 
-    return redirect(Route.LOGIN.pathname, makeRequestInit(cookie));
+    return;
   }
 
   const { familyName, givenName, id } = foundProfile;
 
   log(`👍 User profile found: ${id}`, { familyName, givenName, userId });
 
-  const profile: UserProfile = { familyName, givenName, id, userId, role }
+  return { familyName, givenName, id, userId, role }
+}
+
+const ensureAuthenticated = async (
+  request: Request,
+  next: (session: UserSession) => ReturnType<LoaderFunction>
+) => {
+  const log = logFactory('session', 'ensureAuthenticated')
+  const profile = await readUserProfile(request);
+
+  if (!profile) {
+    const cookie = await writeData<string>(request, "");
+
+    log(`👎 No user profile found. Redirecting to ${Route.LOGIN.pathname}...`)
+
+    return redirect(Route.LOGIN.pathname, makeRequestInit(cookie));
+  }
 
   const userSession = { now: new Date(), profile };
 
@@ -118,4 +129,5 @@ export {
   getSession,
   getUserSession,
   readSession,
+  readUserProfile,
 };
