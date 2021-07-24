@@ -13,6 +13,7 @@
     "db:migrate": "npm run -s db:check && npx prisma migrate deploy",
     "db:reset": "npm run -s db:check && npx prisma migrate reset",
     "db:seed": "npm run -s db:check && npx prisma db seed --preview-feature",
+    "db:ui": "npx prisma studio",
     "dev": "env-cmd remix run",
     "init": "env-cmd npm run db:migrate && npm run db:seed",
     "start": "remix-serve build"
@@ -41,7 +42,7 @@
     "typescript": "^4.3.2"
   },
   "engines": {
-    "node": "14"
+    "node": "^14.16.0"
   },
   "sideEffects": false
 }
