@@ -1,5 +1,5 @@
-import { Route } from "../constants/routes";
-import { handler as healthCheck } from "./healthcheck";
+import { Route } from "../constants/route";
+import { handler as healthCheck } from "./healthCheck";
 import { MiddlewareFunction } from "./types";
 
 const api: Record<string, MiddlewareFunction> = {

@@ -1,5 +1,5 @@
 import { Request } from "node-fetch";
-import { Header } from "../constants/enums";
+import { RequestHeader } from "../constants/requestHeader";
 import { commitSession, readSession } from "./session.server";
 
 enum CookieKey {
@@ -14,7 +14,7 @@ interface FlashDataReadResponse<FlashData> {
 
 const makeRequestInit = (cookie: string) => ({
   headers: {
-    [Header.SET_COOKIE]: cookie,
+    [RequestHeader.SET_COOKIE]: cookie,
   },
 });
 

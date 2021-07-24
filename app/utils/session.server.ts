@@ -6,8 +6,8 @@ import {
   Request
 } from "remix";
 import { ProcessEnv, readRequired } from "../config";
-import { Header } from "../constants/enums";
-import { Route } from "../constants/routes";
+import { RequestHeader } from '../constants/requestHeader';
+import { Route } from "../constants/route";
 import { makeRequestInit, readData, writeData } from "./cookie.server";
 import { prisma } from "./db.server";
 import { logFactory } from "./logFactory";
@@ -120,7 +120,7 @@ const ensureAuthenticated = async (
 };
 
 const readSession = (request: Request) =>
-  getSession(request.headers.get(Header.COOKIE));
+  getSession(request.headers.get(RequestHeader.COOKIE));
 
 export {
   destroySession as clearSession,

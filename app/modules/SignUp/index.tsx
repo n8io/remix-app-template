@@ -11,8 +11,9 @@ import {
   useRouteData
 } from "remix";
 import { InputError } from "../../components/InputError";
-import { App } from "../../constants/enums";
-import { Route } from "../../constants/routes";
+import { App } from "../../constants/app";
+import { PrismaErrorCode } from "../../constants/prismaErrorCode";
+import { Route } from "../../constants/route";
 import {
   makeRequestInit,
   readFlashData as readFlashDataFromCookie,
@@ -26,10 +27,6 @@ import stylesUrl from "./index.css";
 
 const PASSWORD_MIN_LENGTH = 8;
 
-interface ErrorMeta {
-  target: string[]
-}
-
 interface FormData {
   email?: string;
   firstName?: string;
@@ -38,11 +35,17 @@ interface FormData {
   passwordConfirm?: string;
 }
 
+type FieldName = keyof FormData
+
+interface ErrorMeta {
+  target: FieldName[]
+}
+
 interface GenericErrors {
   generic?: string;
 }
 
-type FormErrors = Partial<Record<keyof FormData, string>> & GenericErrors;
+type FormErrors = Partial<Record<FieldName, string>> & GenericErrors;
 
 interface FormSession {
   data?: FormData;
@@ -143,12 +146,12 @@ const action: ActionFunction = async ({ request }) => {
     let message = 'Sign up failed. Sorry'
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2002') {
+      if (error.code === PrismaErrorCode.UNIQUE_CONSTRAINT_FAILURE) {
         const { meta } = error as { meta: ErrorMeta }
 
         if (meta.target[0] === 'email') {
           message = `Email is already in use: ${email}`;
-          // Failed unique constraint (email)
+
           console.error(`🔴 Could not create new user. ${message}`)
         }
       }

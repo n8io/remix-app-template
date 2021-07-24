@@ -1,6 +1,6 @@
 import { Debug } from 'debug';
 import { ActionFunction, LoaderFunction, Request, redirect } from 'remix';
-import { Route } from "../../constants/routes";
+import { Route } from "../../constants/route";
 import {
   makeRequestInit,
   readData,
@@ -11,6 +11,7 @@ import { prisma } from "../../utils/db.server";
 import { logFactory } from "../../utils/logFactory";
 import { ensureAuthenticated, readUserProfile } from '../../utils/session.server';
 import debug from 'debug';
+import { PrismaErrorCode } from '../../constants/prismaErrorCode';
 
 type SessionId = string;
 
@@ -27,7 +28,7 @@ const killSessionAndRedirectToLogin = async (request: Request, log: debug.Debugg
       await prisma.session.delete({ where: { id: sessionId } });
       log(`🔥 Session deleted: ${sessionId}`)
     } catch (error) {
-      if (error.code === 'P2025') {
+      if (error.code === PrismaErrorCode.RECORD_NOT_FOUND) {
         log(`🔥 Session "${sessionId}" no longer not exists. Nothing to do.`)
       } else {
         console.error(`🔴 Failed to delete user session: ${sessionId}`, error)

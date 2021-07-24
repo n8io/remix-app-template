@@ -10,8 +10,8 @@ import {
   useRouteData,
 } from "remix";
 import { InputError } from "../../components/InputError";
-import { App } from "../../constants/enums";
-import { Route } from "../../constants/routes";
+import { App } from "../../constants/app";
+import { Route } from "../../constants/route";
 import {
   makeRequestInit,
   readFlashData as readFlashDataFromCookie,

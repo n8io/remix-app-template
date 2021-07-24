@@ -1,5 +1,5 @@
 import debug, { Debugger } from "debug";
-import { App } from "../constants/enums";
+import { App } from "../constants/app";
 
 const loggers: Record<string, Debugger> = {};
 

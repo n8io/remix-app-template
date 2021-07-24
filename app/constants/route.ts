@@ -4,7 +4,7 @@ interface RouteType {
 
 const Route: Record<string, RouteType> = Object.freeze({
   HEALTH_CHECK: {
-    pathname: "/api/healthcheck",
+    pathname: "/api/health-check",
   },
   LOGIN: {
     pathname: "/login",

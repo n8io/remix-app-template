@@ -5,8 +5,8 @@ import {
   MetaFunction,
   useRouteData,
 } from "remix";
-import { App } from "../../constants/enums";
-import { Route } from "../../constants/routes";
+import { App } from "../../constants/app";
+import { Route } from "../../constants/route";
 import { ensureAuthenticated } from "../../utils/session.server";
 import stylesUrl from "./index.css";
 
