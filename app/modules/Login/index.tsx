@@ -63,6 +63,8 @@ const action: ActionFunction = async ({ request }) => {
     errors.password = UiLoginErrorMessage.PASSWORD_REQUIRED;
   }
 
+  data.password = undefined;
+
   if (Object.keys(errors).length) {
     const formSession: FormSession = { data, errors };
     const cookie = await CookieProvider.writeFlashData<FormSession>(
@@ -167,6 +169,12 @@ const links: LinksFunction = () => [
 ];
 
 const loader: LoaderFunction = async ({ request }) => {
+  const sessionId = await CookieProvider.readData<string>(request);
+
+  if (sessionId) {
+    return redirect(Route.ROOT.pathname);
+  }
+
   const { cookie, data = {} } = await CookieProvider.readFlashData<FormSession>(
     request
   );
@@ -198,7 +206,7 @@ const Login = () => {
             <br />
             <input
               className={errors?.email && "error"}
-              defaultValue={data?.email ?? "a@a.a"}
+              defaultValue={data?.email}
               name="email"
               type="email"
             />
@@ -211,7 +219,7 @@ const Login = () => {
             <br />
             <input
               className={errors?.password && "error"}
-              defaultValue={data?.password ?? "123"}
+              defaultValue={data?.password}
               name="password"
               type="password"
             />

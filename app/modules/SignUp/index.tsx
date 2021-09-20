@@ -167,6 +167,12 @@ const links: LinksFunction = () => [
 ];
 
 const loader: LoaderFunction = async ({ request }) => {
+  const sessionId = await CookieProvider.readData<string>(request);
+
+  if (sessionId) {
+    return redirect(Route.ROOT.pathname);
+  }
+
   const { cookie, data = {} } = await CookieProvider.readFlashData<FormSession>(
     request
   );
