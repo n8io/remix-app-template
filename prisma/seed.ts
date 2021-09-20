@@ -6,12 +6,12 @@ const main = async () => {
   const adminUser = {
     email: "admin@example.com",
     role: Role.ADMIN,
-    username: "admin",
+    passwordHash: "admin",
   };
 
   const user = await db.user.upsert({
     create: adminUser,
-    where: { username: adminUser.username },
+    where: { email: adminUser.email },
     update: {},
   });
 
@@ -19,7 +19,8 @@ const main = async () => {
 
   const profile = await db.profile.upsert({
     create: {
-      name: "Admin",
+      familyName: "User",
+      givenName: "Admin",
       userId: user.id,
     },
     where: { userId: user.id },

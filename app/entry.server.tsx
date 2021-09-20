@@ -1,6 +1,9 @@
-import ReactDOMServer from "react-dom/server";
+import { renderToString } from "react-dom/server";
 import type { EntryContext } from "remix";
 import { RemixServer } from "remix";
+import { api } from "./api";
+import { ContentType } from "./constants/contentType";
+import { RequestHeader } from "./constants/requestHeader";
 
 const handleRequest = (
   request: Request,
@@ -8,17 +11,34 @@ const handleRequest = (
   responseHeaders: Headers,
   remixContext: EntryContext
 ) => {
-  const markup = ReactDOMServer.renderToString(
+  const pathname = new URL(request.url).pathname.toLowerCase();
+
+  if (api[pathname]) {
+    return api[pathname]({
+      remixContext,
+      request,
+      responseStatusCode,
+      responseHeaders,
+    });
+  }
+
+  const markup = renderToString(
     <RemixServer context={remixContext} url={request.url} />
   );
 
-  return new Response("<!DOCTYPE html>" + markup, {
+  const body: BodyInit = `<!DOCTYPE html>${markup}`;
+
+  const headers: HeadersInit = {
+    ...Object.fromEntries(responseHeaders),
+    [RequestHeader.CONTENT_TYPE]: ContentType.HTML,
+  };
+
+  const init: ResponseInit = {
     status: responseStatusCode,
-    headers: {
-      ...Object.fromEntries(responseHeaders),
-      "Content-Type": "text/html",
-    },
-  });
+    headers,
+  };
+
+  return new Response(body, init);
 };
 
 export default handleRequest;

@@ -10,46 +10,36 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Task {
-  id          String   @id @default(cuid())
-  completedAt DateTime
-  createdAt   DateTime @default(now())
-  description String?
-  isComplete  Boolean  @default(false)
-  project     Project  @relation(fields: [projectId], references: [id])
-  projectId   String
-  updatedAt   DateTime @updatedAt
-}
-
-model Project {
-  id        String   @id @default(cuid())
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  String
-  createdAt DateTime @default(now())
-  tasks     Task[]
-  title     String   @db.VarChar(255)
-  updatedAt DateTime @updatedAt
-}
-
 model Profile {
-  id        String   @id @default(cuid())
-  name      String?
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String   @unique
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  givenName  String   @db.VarChar(255)
+  familyName String   @db.VarChar(255)
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id])
 }
 
 model User {
-  id        String    @id @default(cuid())
-  createdAt DateTime  @default(now())
-  email     String    @unique
-  username  String    @unique
-  projects  Project[]
-  profile   Profile?
-  role      Role      @default(USER)
+  id                           String    @id @default(cuid())
+  email                        String    @unique
+  passwordHash                 String    @db.VarChar(512)
+  passwordResetToken           String?
+  passwordResetTokenExpiration DateTime?
+  tokenVersion                 Int       @default(0)
+  role                         Role      @default(USER)
+  createdAt                    DateTime  @default(now())
+  profile                      Profile?
+  sessions                     Session[]
 }
 
 enum Role {
   ADMIN
   USER
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userId    String
+  User      User     @relation(fields: [userId], references: [id])
 }
