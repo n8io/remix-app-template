@@ -6,17 +6,22 @@ import {
   Request,
 } from "remix";
 import { ProcessEnv, readRequired } from "../config";
-import { RequestHeader } from "../constants/requestHeader";
+import { Environment } from "../constants/environment";
+import { Header } from "../constants/header";
 import { Route } from "../constants/route";
-import { makeRequestInit, readData, writeData } from "./cookie.server";
-import { prisma } from "./db.server";
+import { CookieProvider } from "../providers/cookie/index.server";
+import { UserProfileProvider } from "../providers/userProfile";
+import { UserSessionProvider } from "../providers/userSession";
+import { db } from "../services/db.server";
 
 type SessionId = string;
 
-interface UserSession {
+interface ClientUserSession {
   now: Date;
   profile: Profile;
 }
+
+const isDevelopment = process.env.NODE_ENV === Environment.DEVELOPMENT;
 
 const { commitSession, getSession, destroySession } =
   createCookieSessionStorage({
@@ -28,39 +33,52 @@ const { commitSession, getSession, destroySession } =
       path: "/",
       sameSite: "lax",
       secrets: [readRequired(ProcessEnv.AUTH_SECRET)],
-      secure: process.env.NODE_ENV !== "development",
+      secure: !isDevelopment,
     },
   });
 
 const getUserSession = () => ({ now: new Date() });
 
+const userProfileProvider = new UserProfileProvider({ db });
+const userSessionProvider = new UserSessionProvider({ db });
+
 const ensureAuthenticated = async (
   request: Request,
-  next: (session: UserSession) => ReturnType<LoaderFunction>
+  next: (session: ClientUserSession) => ReturnType<LoaderFunction>
 ) => {
-  const sessionId = await readData<SessionId>(request);
+  const sessionId = await CookieProvider.readData<SessionId>(request);
 
   if (!sessionId) {
     return redirect(Route.LOGIN.pathname);
   }
 
-  const session = await prisma.session.findUnique({ where: { id: sessionId } });
+  const session = await userSessionProvider.find(sessionId);
 
   if (!session) {
-    const cookie = await writeData<string>(request, "");
+    const cookie = await CookieProvider.writeData<string>(request, "");
 
-    return redirect(Route.LOGIN.pathname, makeRequestInit(cookie));
+    return redirect(
+      Route.LOGIN.pathname,
+      CookieProvider.makeRequestInit(cookie)
+    );
   }
 
   const { userId } = session;
-  const profile = await prisma.profile.findUnique({ where: { userId } });
-  const userSession = { now: new Date(), profile: profile as Profile };
 
-  return next(userSession);
+  await userSessionProvider.touch(sessionId);
+
+  const profile = await userProfileProvider.findByUserId(userId);
+
+  const clientUserSession: ClientUserSession = {
+    now: new Date(),
+    profile: profile as Profile,
+  };
+
+  return next(clientUserSession);
 };
 
 const readSession = (request: Request) =>
-  getSession(request.headers.get(RequestHeader.COOKIE));
+  getSession(request.headers.get(Header.COOKIE));
 
 export {
   destroySession as clearSession,
