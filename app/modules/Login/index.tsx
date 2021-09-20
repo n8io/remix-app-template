@@ -1,3 +1,4 @@
+import { Session } from ".prisma/client";
 import {
   ActionFunction,
   Form,
@@ -12,16 +13,11 @@ import {
 import { InputError } from "../../components/InputError";
 import { App } from "../../constants/app";
 import { Route } from "../../constants/route";
-import {
-  makeRequestInit,
-  readFlashData as readFlashDataFromCookie,
-  writeData as writeUserToCookie,
-  writeFlashData as writeFlashDataToCookie,
-} from "../../utils/cookie.server";
-import { compare } from "../../utils/crypto.server";
-import { prisma } from "../../utils/db.server";
+import { CookieProvider } from "../../providers/cookie/index.server";
+import { UserProvider } from "../../providers/user";
+import { UserSessionProvider } from "../../providers/userSession";
+import { db } from "../../services/db.server";
 import { logFactory } from "../../utils/logFactory";
-import { readUserProfile } from "../../utils/session.server";
 import stylesUrl from "./index.css";
 
 interface FormData {
@@ -33,12 +29,12 @@ interface GenericErrors {
   generic?: string;
 }
 
-const ErrorMessage = Object.freeze({
-  EMAIL_REQUIRED: "Email is required",
-  PASSWORD_REQUIRED: "Password is required",
-  ERROR: "Sorry, could not login",
-  INVALID: "Invalid username/password. Try again.",
-});
+enum UiLoginErrorMessage {
+  EMAIL_REQUIRED = "Email is required",
+  ERROR = "Sorry, could not login",
+  INVALID = "Invalid username/password. Try again.",
+  PASSWORD_REQUIRED = "Password is required",
+}
 
 type FormErrors = Partial<Record<keyof FormData, string>> & GenericErrors;
 
@@ -50,100 +46,120 @@ interface FormSession {
 
 const action: ActionFunction = async ({ request }) => {
   const log = logFactory("login", "action");
+  const userProvider = new UserProvider({ db });
+  const userSessionProvider = new UserSessionProvider({ db });
 
   const data: FormData = Object.fromEntries(
     new URLSearchParams(await request.text())
   );
 
-  const { email, password } = data;
   const errors: FormErrors = {};
 
-  if (!email) {
-    errors.email = ErrorMessage.EMAIL_REQUIRED;
+  if (!data?.email) {
+    errors.email = UiLoginErrorMessage.EMAIL_REQUIRED;
   }
 
-  if (!password) {
-    errors.password = ErrorMessage.PASSWORD_REQUIRED;
+  if (!data?.password) {
+    errors.password = UiLoginErrorMessage.PASSWORD_REQUIRED;
   }
+
+  data.password = undefined;
 
   if (Object.keys(errors).length) {
     const formSession: FormSession = { data, errors };
-    const cookie = await writeFlashDataToCookie<FormSession>(
+    const cookie = await CookieProvider.writeFlashData<FormSession>(
       request,
       formSession
     );
 
-    return redirect(Route.LOGIN.pathname, makeRequestInit(cookie));
+    return redirect(
+      Route.LOGIN.pathname,
+      CookieProvider.makeRequestInit(cookie)
+    );
   }
+
+  const email = data.email!.trim().toLowerCase();
+  const password = data.password!;
+
+  // Don't pass this back over the wire
+  data.password = undefined;
 
   try {
     log(`🔐 Attempting to login as ${email}...`);
 
-    const user = await prisma.user.findUnique({
-      where: { email: email!.trim().toLowerCase() },
-    });
+    const user = await userProvider.findByEmail(email);
 
     if (!user) {
-      log(`🔒 No user found: ${email}`);
-
-      errors.generic = ErrorMessage.INVALID;
+      errors.generic = UiLoginErrorMessage.INVALID;
 
       const formSession: FormSession = { data, errors };
 
-      const cookie = await writeFlashDataToCookie<FormSession>(
+      const cookie = await CookieProvider.writeFlashData<FormSession>(
         request,
         formSession
       );
 
-      return redirect(Route.LOGIN.pathname, makeRequestInit(cookie));
+      return redirect(
+        Route.LOGIN.pathname,
+        CookieProvider.makeRequestInit(cookie)
+      );
     }
 
-    const { passwordHash } = user;
-    const isValidPassword = await compare(password!, passwordHash);
+    const isValidPassword = await userProvider.isValidPassword(
+      user.email,
+      password
+    );
 
     if (!isValidPassword) {
       log(`🔒 Invalid password given for user: ${email}`);
 
-      errors.generic = ErrorMessage.INVALID;
+      errors.generic = UiLoginErrorMessage.INVALID;
 
       const formSession: FormSession = { data, errors };
 
-      const cookie = await writeFlashDataToCookie<FormSession>(
+      const cookie = await CookieProvider.writeFlashData<FormSession>(
         request,
         formSession
       );
 
-      return redirect(Route.LOGIN.pathname, makeRequestInit(cookie));
+      return redirect(
+        Route.LOGIN.pathname,
+        CookieProvider.makeRequestInit(cookie)
+      );
     }
 
     log(`💚 User logged in successfully ${email}`);
 
-    log(`✨ Creating new session for ${email}...`);
+    const { id: sessionId }: Session = await userSessionProvider.create(
+      user.id
+    );
 
-    const { id: sessionId } = await prisma.session.create({
-      data: { userId: user.id },
-    });
-
-    log(`👍 New session created for ${email}`);
-
-    const cookie = await writeUserToCookie<string>(request, sessionId);
+    const cookie = await CookieProvider.writeData<string>(request, sessionId);
 
     log(`↪️ Redirecting to ${Route.ROOT.pathname}...`);
 
-    return redirect(Route.ROOT.pathname, makeRequestInit(cookie));
+    userSessionProvider.flushStale();
+
+    return redirect(
+      Route.ROOT.pathname,
+      CookieProvider.makeRequestInit(cookie)
+    );
   } catch (error) {
     console.error(error);
 
-    errors.generic = ErrorMessage.ERROR;
+    errors.generic = UiLoginErrorMessage.ERROR;
 
     const formSession: FormSession = { data, errors };
 
-    const cookie = await writeFlashDataToCookie<FormSession>(
+    const cookie = await CookieProvider.writeFlashData<FormSession>(
       request,
       formSession
     );
 
-    return redirect(Route.LOGIN.pathname, makeRequestInit(cookie));
+    return redirect(
+      Route.LOGIN.pathname,
+      CookieProvider.makeRequestInit(cookie)
+    );
   }
 };
 
@@ -153,15 +169,17 @@ const links: LinksFunction = () => [
 ];
 
 const loader: LoaderFunction = async ({ request }) => {
-  const profile = await readUserProfile(request)
+  const sessionId = await CookieProvider.readData<string>(request);
 
-  if (profile) return redirect(Route.ROOT.pathname)
+  if (sessionId) {
+    return redirect(Route.ROOT.pathname);
+  }
 
-  const { cookie, data = {} } = await readFlashDataFromCookie<FormSession>(
+  const { cookie, data = {} } = await CookieProvider.readFlashData<FormSession>(
     request
   );
 
-  return json(data, makeRequestInit(cookie));
+  return json(data, CookieProvider.makeRequestInit(cookie));
 };
 
 const meta: MetaFunction = () => ({
@@ -188,7 +206,7 @@ const Login = () => {
             <br />
             <input
               className={errors?.email && "error"}
-              defaultValue={data?.email ?? 'a@a.a'}
+              defaultValue={data?.email}
               name="email"
               type="email"
             />
@@ -201,7 +219,7 @@ const Login = () => {
             <br />
             <input
               className={errors?.password && "error"}
-              defaultValue={data?.password ?? '123'}
+              defaultValue={data?.password}
               name="password"
               type="password"
             />

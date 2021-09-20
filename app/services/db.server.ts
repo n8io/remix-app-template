@@ -13,10 +13,12 @@ declare global {
 const DATABASE_URL = readRequired(ProcessEnv.DATABASE_URL);
 const connectionString = new URL(DATABASE_URL);
 
-const prisma = new PrismaClient({
+const db = new PrismaClient({
   datasources: {
-    db: { url: connectionString.toString() },
+    db: {
+      url: connectionString.toString(),
+    },
   },
 });
 
-export { prisma };
+export { db };

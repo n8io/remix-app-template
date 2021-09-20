@@ -1,4 +1,4 @@
-import { Prisma, Profile, Session, User } from "@prisma/client";
+import { Session } from "@prisma/client";
 import {
   ActionFunction,
   Form,
@@ -8,24 +8,29 @@ import {
   LoaderFunction,
   MetaFunction,
   redirect,
-  useRouteData
+  useRouteData,
 } from "remix";
 import { InputError } from "../../components/InputError";
 import { App } from "../../constants/app";
-import { PrismaErrorCode } from "../../constants/prismaErrorCode";
 import { Route } from "../../constants/route";
-import {
-  makeRequestInit,
-  readFlashData as readFlashDataFromCookie,
-  writeData as writeDataToCookie,
-  writeFlashData as writeFlashDataToCookie
-} from "../../utils/cookie.server";
-import { hash } from "../../utils/crypto.server";
-import { prisma } from "../../utils/db.server";
+import { CookieProvider } from "../../providers/cookie/index.server";
+import { UserProvider as UserProvider } from "../../providers/user";
+import { UserSessionProvider } from "../../providers/userSession";
+import { db } from "../../services/db.server";
 import { logFactory } from "../../utils/logFactory";
 import stylesUrl from "./index.css";
 
 const PASSWORD_MIN_LENGTH = 8;
+
+enum UiSignUpError {
+  EMAIL_REQUIRED = "Email is required",
+  FIRST_NAME_REQUIRED = "First name is required",
+  LAST_NAME_REQUIRED = "Last name is required",
+  PASSWORD_REQUIRED = "Password is required",
+  WEAK_PASSWORD = "Your password sucks. Try again.",
+  PASSWORD_CONFIRMATION_REQUIRED = "Password confirmation is required",
+  PASSWORD_MISMATCH = "Password does not match",
+}
 
 interface FormData {
   email?: string;
@@ -35,141 +40,124 @@ interface FormData {
   passwordConfirm?: string;
 }
 
-type FieldName = keyof FormData
-
-interface ErrorMeta {
-  target: FieldName[]
-}
-
 interface GenericErrors {
   generic?: string;
 }
 
-type FormErrors = Partial<Record<FieldName, string>> & GenericErrors;
+type FormErrors = Partial<Record<keyof FormData, string>> & GenericErrors;
 
 interface FormSession {
   data?: FormData;
   errors?: FormErrors;
 }
 
+const userProvider = new UserProvider({ db });
+const userSession = new UserSessionProvider({ db });
+
 const action: ActionFunction = async ({ request }) => {
-  const log = logFactory('sign-up', 'action')
+  const log = logFactory("sign-up", "action");
 
   const data: FormData = Object.fromEntries(
     new URLSearchParams(await request.text())
   );
 
-  const { email, firstName, lastName, password, passwordConfirm } = data;
   const errors: FormErrors = {};
 
-  if (!email) {
-    errors.email = "Email is required";
+  if (!data?.email) {
+    errors.email = UiSignUpError.EMAIL_REQUIRED;
   }
 
-  if (!firstName) {
-    errors.firstName = "First name is required";
+  if (!data?.firstName) {
+    errors.firstName = UiSignUpError.FIRST_NAME_REQUIRED;
   }
 
-  if (!lastName) {
-    errors.lastName = "Last name is required";
+  if (!data?.lastName) {
+    errors.lastName = UiSignUpError.LAST_NAME_REQUIRED;
   }
+
+  const password = data?.password;
+  const passwordConfirm = data?.passwordConfirm;
+
+  // Don't pass these back over the wire
+  data.password = undefined;
+  data.passwordConfirm = undefined;
 
   if (!password) {
-    errors.password = "Password is required";
-  } else if (password.length < PASSWORD_MIN_LENGTH) {
-    errors.password = "Your password sucks. Try again.";
+    errors.password = UiSignUpError.PASSWORD_REQUIRED;
+  } else if (password?.length < PASSWORD_MIN_LENGTH) {
+    errors.password = UiSignUpError.WEAK_PASSWORD;
   }
 
   if (password) {
     if (!passwordConfirm) {
-      errors.passwordConfirm = "Password confirmation is required";
+      errors.passwordConfirm = UiSignUpError.PASSWORD_CONFIRMATION_REQUIRED;
     } else if (passwordConfirm !== password) {
-      errors.passwordConfirm = "Password does not match";
+      errors.passwordConfirm = UiSignUpError.PASSWORD_MISMATCH;
     }
   }
 
   if (Object.keys(errors).length) {
     const formSession: FormSession = { data, errors };
 
-    const cookie = await writeFlashDataToCookie<FormSession>(
+    const cookie = await CookieProvider.writeFlashData<FormSession>(
       request,
       formSession
     );
 
-    console.error(`👎 Invalid form. ${Object.keys(errors).length} error(s) found`, Object.values(errors))
+    console.error(
+      `👎 Invalid form. ${Object.keys(errors).length} error(s) found`,
+      Object.values(errors)
+    );
 
-    return redirect(Route.SIGN_UP.pathname, makeRequestInit(cookie));
+    return redirect(
+      Route.SIGN_UP.pathname,
+      CookieProvider.makeRequestInit(cookie)
+    );
   }
 
+  const familyName = data?.firstName as string;
+  const givenName = data?.lastName as string;
+  const email = data.email!.toLowerCase().trim();
+
+  const newUser = {
+    email,
+    familyName,
+    givenName,
+  };
+
   try {
-    const newUser: Partial<User> = {
-      email: data.email!.toLowerCase().trim(),
-      passwordHash: await hash(data.password!),
-    };
-
-
-    log(`🆕 Creating new user: ${email}`)
-
-    const { id: userId } = await prisma.user.create({
-      data: newUser as any,
-      select: { id: true },
+    const user = await userProvider.create({
+      ...newUser,
+      clearTextPassword: password as string,
     });
 
-    log(`🆕 New user created: ${email}`)
+    const { id: sessionId }: Session = await userSession.create(
+      user?.id as string
+    );
 
-    const newProfile: Partial<Profile> = {
-      familyName: lastName,
-      givenName: firstName,
-      userId,
-    };
+    const cookie = await CookieProvider.writeData<string>(request, sessionId);
 
-    log(`🐣 Creating new profile: ${userId}`, {
-      firstName,
-      lastName,
-    })
-
-    await prisma.profile.create({ data: newProfile as any });
-
-    log(`🐣 New profile created: ${userId}`)
-
-    const newSession: Partial<Session> = { userId };
-
-    const { id: sessionId } = await prisma.session.create({
-      data: newSession as any,
-      select: { id: true },
-    });
-
-    const cookie = await writeDataToCookie<string>(request, sessionId);
-
-    return redirect(Route.ROOT.pathname, makeRequestInit(cookie));
+    return redirect(
+      Route.ROOT.pathname,
+      CookieProvider.makeRequestInit(cookie)
+    );
   } catch (error) {
-    let message = 'Sign up failed. Sorry'
-
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === PrismaErrorCode.UNIQUE_CONSTRAINT_FAILURE) {
-        const { meta } = error as { meta: ErrorMeta }
-
-        if (meta.target[0] === 'email') {
-          message = `Email is already in use: ${email}`;
-
-          console.error(`🔴 Could not create new user. ${message}`)
-        }
-      }
-    } else {
-      console.error(error)
-    }
+    console.error(`🛑 Failed to create new user`, newUser, error);
 
     const formSession: FormSession = {
       data,
-      errors: { generic: message },
+      errors: { generic: `Sign up failed. Sorry` },
     };
 
-    const cookie = await writeFlashDataToCookie<FormSession>(
+    const cookie = await CookieProvider.writeFlashData<FormSession>(
       request,
       formSession
     );
 
-    return redirect(Route.SIGN_UP.pathname, makeRequestInit(cookie));
+    return redirect(
+      Route.SIGN_UP.pathname,
+      CookieProvider.makeRequestInit(cookie)
+    );
   }
 };
 
@@ -179,11 +167,17 @@ const links: LinksFunction = () => [
 ];
 
 const loader: LoaderFunction = async ({ request }) => {
-  const { cookie, data = {} } = await readFlashDataFromCookie<FormSession>(
+  const sessionId = await CookieProvider.readData<string>(request);
+
+  if (sessionId) {
+    return redirect(Route.ROOT.pathname);
+  }
+
+  const { cookie, data = {} } = await CookieProvider.readFlashData<FormSession>(
     request
   );
 
-  return json(data, makeRequestInit(cookie));
+  return json(data, CookieProvider.makeRequestInit(cookie));
 };
 
 const meta: MetaFunction = () => ({
@@ -193,8 +187,6 @@ const meta: MetaFunction = () => ({
 
 const SignUp = () => {
   const { data, errors } = useRouteData<FormSession>();
-
-  console.log({ errors });
 
   return (
     <div style={{ textAlign: "center", padding: 20 }}>
@@ -248,7 +240,6 @@ const SignUp = () => {
             <br />
             <input
               className={errors?.password && "error"}
-              defaultValue={data?.password ?? "12345678"}
               name="password"
               type="password"
             />
@@ -262,7 +253,6 @@ const SignUp = () => {
             <br />
             <input
               className={errors?.passwordConfirm && "error"}
-              defaultValue={data?.passwordConfirm ?? "12345678"}
               name="passwordConfirm"
               type="password"
             />

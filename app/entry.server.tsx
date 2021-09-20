@@ -2,8 +2,11 @@ import { renderToString } from "react-dom/server";
 import type { EntryContext } from "remix";
 import { RemixServer } from "remix";
 import { api } from "./api";
-import { ContentType } from "./constants/contentType";
 import { RequestHeader } from "./constants/requestHeader";
+
+enum ContentType {
+  HTML = "text/html",
+}
 
 const handleRequest = (
   request: Request,

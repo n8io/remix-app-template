@@ -1,4 +1,4 @@
-import { Logout, action, loader } from "../modules/Logout";
+import { Logout, action } from "../modules/Logout";
 
 export default Logout;
-export { action, loader };
+export { action };
