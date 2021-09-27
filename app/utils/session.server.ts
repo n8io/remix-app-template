@@ -37,8 +37,6 @@ const { commitSession, getSession, destroySession } =
     },
   });
 
-const getUserSession = () => ({ now: new Date() });
-
 const userProfileProvider = new UserProfileProvider({ db });
 const userSessionProvider = new UserSessionProvider({ db });
 
@@ -85,6 +83,5 @@ export {
   ensureAuthenticated,
   commitSession,
   getSession,
-  getUserSession,
   readSession,
 };
