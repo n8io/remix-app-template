@@ -1,4 +1,3 @@
-import { ReactNode } from "react";
 import { FadeIn } from "../FadeIn";
 import stylesUrl from "./index.css";
 

@@ -1,10 +1,5 @@
 import { Profile } from "@prisma/client";
-import {
-  createCookieSessionStorage,
-  LoaderFunction,
-  redirect,
-  Request,
-} from "remix";
+import { createCookieSessionStorage, LoaderFunction, redirect } from "remix";
 import { ProcessEnv, readRequired } from "../config";
 import { Environment } from "../constants/environment";
 import { Header } from "../constants/header";

@@ -1,4 +1,3 @@
-import { Request, RequestInit } from "node-fetch";
 import { Header } from "../../constants/header";
 import { commitSession, readSession } from "../../utils/session.server";
 

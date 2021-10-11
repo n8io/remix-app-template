@@ -8,8 +8,12 @@
       "ES2020"
     ],
     "moduleResolution": "node",
+    "paths": { 
+      "~/*": ["./app/*"]
+    },
     "skipLibCheck": true,
     "strict": true,
     "target": "es2019"
-  }
+  },
+  "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"]
 }
