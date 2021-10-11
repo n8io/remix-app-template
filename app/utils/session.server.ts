@@ -1,10 +1,5 @@
 import { Profile } from "@prisma/client";
-import {
-  createCookieSessionStorage,
-  LoaderFunction,
-  redirect,
-  Request,
-} from "remix";
+import { createCookieSessionStorage, LoaderFunction, redirect } from "remix";
 import { ProcessEnv, readRequired } from "../config";
 import { Environment } from "../constants/environment";
 import { Header } from "../constants/header";
@@ -36,8 +31,6 @@ const { commitSession, getSession, destroySession } =
       secure: !isDevelopment,
     },
   });
-
-const getUserSession = () => ({ now: new Date() });
 
 const userProfileProvider = new UserProfileProvider({ db });
 const userSessionProvider = new UserSessionProvider({ db });
@@ -85,6 +78,5 @@ export {
   ensureAuthenticated,
   commitSession,
   getSession,
-  getUserSession,
   readSession,
 };
